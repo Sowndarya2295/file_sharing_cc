@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { toast } from "sonner";
-import { Download, Loader2, FileText, Clock3, Hash, ShieldCheck, ArrowLeft } from "lucide-react";
+import { Download, Loader2, FileText, Clock3, Hash, ShieldCheck, ArrowLeft, Lock } from "lucide-react";
 import { Header } from "@/components/Header";
 import { Button } from "@/components/ui/button";
 import { Countdown } from "@/components/Countdown";
-import { getShare, generateDownloadUrl, buildFileUrl } from "@/lib/api";
+import { getShare, generateDownloadUrl, buildFileUrl, verifySharePassword } from "@/lib/api";
 import { formatBytes, formatDateTime } from "@/lib/format";
 
 export default function SharePage() {
@@ -14,6 +14,9 @@ export default function SharePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null); // "invalid" | "expired" | "used"
   const [downloading, setDownloading] = useState(false);
+  const [pw, setPw] = useState("");
+  const [pwError, setPwError] = useState("");
+  const [unlocking, setUnlocking] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -46,6 +49,29 @@ export default function SharePage() {
       toast.error(err?.response?.data?.message || "Download unavailable");
     } finally {
       setDownloading(false);
+    }
+  };
+
+  const unlock = async () => {
+    if (!pw.trim()) return;
+    setUnlocking(true);
+    setPwError("");
+    try {
+      const { downloadUrl } = await verifySharePassword(shareId, pw);
+      window.location.href = buildFileUrl(downloadUrl);
+      toast.success("Password verified — download started");
+      setTimeout(load, 2500);
+    } catch (err) {
+      const code = err?.response?.data?.error;
+      if (code === "incorrect_password") {
+        setPwError("Incorrect password. Please try again.");
+        toast.error("Incorrect password");
+      } else if (code === "expired") setError("expired");
+      else if (code === "used") setError("used");
+      else if (code === "invalid") setError("invalid");
+      else toast.error(err?.response?.data?.message || "Could not verify password");
+    } finally {
+      setUnlocking(false);
     }
   };
 
@@ -88,12 +114,43 @@ export default function SharePage() {
                 <span className="truncate font-mono text-[11px] text-slate-500" title={share.fileHash}>{share.fileHash}</span>
               </div>
 
+              {share.passwordProtected && (
+                <p className="mt-4 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-center text-sm text-blue-700">
+                  🔒 Password protected — enter the password to unlock this file.
+                </p>
+              )}
               {share.oneTime && (
                 <p className="mt-4 rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-center text-sm text-orange-700">
                   🔥 One-time link — this file burns after you download it.
                 </p>
               )}
 
+              {share.passwordProtected && (
+                <div className="mt-5">
+                  <input
+                    data-testid="share-password-entry-input"
+                    type="password"
+                    value={pw}
+                    onChange={(e) => { setPw(e.target.value); setPwError(""); }}
+                    onKeyDown={(e) => e.key === "Enter" && pw.trim() && unlock()}
+                    placeholder="Enter share password"
+                    className={`h-12 w-full rounded-xl border bg-white px-4 text-sm outline-none transition-colors focus:ring-2 ${pwError ? "border-red-400 focus:ring-red-100" : "border-slate-300 focus:border-blue-500 focus:ring-blue-100"}`}
+                  />
+                  {pwError && (
+                    <p data-testid="password-error-message" className="mt-2 text-sm font-medium text-red-600">{pwError}</p>
+                  )}
+                  <Button
+                    data-testid="unlock-download-button"
+                    onClick={unlock}
+                    disabled={unlocking || !pw.trim()}
+                    className="mt-3 h-12 w-full bg-blue-600 text-base font-semibold hover:bg-blue-700 active:scale-[0.99]"
+                  >
+                    {unlocking ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifying…</> : <><Lock className="mr-2 h-4 w-4" /> Unlock &amp; Download</>}
+                  </Button>
+                </div>
+              )}
+
+              {!share.passwordProtected && (
               <Button
                 data-testid="download-securely-button"
                 onClick={download}
@@ -102,6 +159,7 @@ export default function SharePage() {
               >
                 {downloading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Preparing…</> : <><Download className="mr-2 h-4 w-4" /> Download Securely</>}
               </Button>
+              )}
               <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-xs text-slate-400">
                 <ShieldCheck className="h-3.5 w-3.5" /> Delivered via a private, expiring backend link.
               </p>

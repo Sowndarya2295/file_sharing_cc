@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { UploadCloud, File as FileIcon, Loader2, CheckCircle2, XCircle, Flame, Clock } from "lucide-react";
+import { UploadCloud, File as FileIcon, Loader2, CheckCircle2, XCircle, Flame, Clock, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -21,6 +21,8 @@ export const UploadCard = ({ onCreated }) => {
   const [scan, setScan] = useState(null); // {state, checks, hash}
   const [lifetime, setLifetime] = useState("15m");
   const [oneTime, setOneTime] = useState(false);
+  const [protect, setProtect] = useState(false);
+  const [password, setPassword] = useState("");
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -62,6 +64,8 @@ export const UploadCard = ({ onCreated }) => {
     setFile(null);
     setScan(null);
     setProgress(0);
+    setProtect(false);
+    setPassword("");
     if (inputRef.current) inputRef.current.value = "";
   };
 
@@ -74,6 +78,7 @@ export const UploadCard = ({ onCreated }) => {
         file,
         lifetime,
         oneTime,
+        password: protect ? password : null,
         sessionId: getSessionId(),
         onProgress: setProgress,
       });
@@ -212,6 +217,38 @@ export const UploadCard = ({ onCreated }) => {
         </div>
       </label>
 
+      {/* AccessGuard — password protection */}
+      <div className={`mt-3 rounded-xl border transition-all ${protect ? "border-blue-300 bg-blue-50/60" : "border-slate-200 bg-slate-50/60 hover:border-blue-200"}`}>
+        <label htmlFor="protect" className="flex cursor-pointer items-start gap-3 p-4">
+          <Checkbox
+            id="protect"
+            data-testid="protect-with-password-checkbox"
+            checked={protect}
+            onCheckedChange={(v) => setProtect(!!v)}
+            className="mt-0.5"
+          />
+          <div>
+            <span className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
+              <Lock className={`h-4 w-4 ${protect ? "text-blue-600" : "text-slate-400"}`} />
+              Protect with password
+            </span>
+            <p className="mt-0.5 text-xs text-slate-500">Recipients must enter this password before downloading. It never appears in the link.</p>
+          </div>
+        </label>
+        {protect && (
+          <div className="border-t border-blue-200/70 px-4 py-3">
+            <input
+              data-testid="share-password-input"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Set a share password"
+              className="h-10 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </div>
+        )}
+      </div>
+
       {uploading && (
         <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
           <div className="h-full rounded-full bg-blue-600 transition-all" style={{ width: `${progress}%` }} />
@@ -221,7 +258,7 @@ export const UploadCard = ({ onCreated }) => {
       <Button
         data-testid="upload-and-create-share-button"
         onClick={submit}
-        disabled={!file || scan?.state !== "verified" || uploading}
+        disabled={!file || scan?.state !== "verified" || uploading || (protect && !password.trim())}
         className="mt-5 h-12 w-full bg-blue-600 text-base font-semibold hover:bg-blue-700 active:scale-[0.99]"
       >
         {uploading ? (

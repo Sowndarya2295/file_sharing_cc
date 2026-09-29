@@ -44,6 +44,11 @@ Tick **"Burn after first download"** at upload. DropBoxer then:
 5. Records the download and marks the share `USED`
 6. Rejects every later attempt: **"🔥 This file has already been downloaded and the share link is no longer valid."**
 
+### 🔒 AccessGuard — Password-Protected Shares
+Tick **"Protect with password"** at upload and set a share password. The password is **bcrypt-hashed** (never stored or returned in plaintext, and never placed in the share URL). Recipients get a password-entry screen; the password is verified server-side **before** any temporary download URL is minted, so a wrong password can never reach the file. It combines freely with TimeVault, Burn After Download and SafeDrop.
+
+**AWS mapping:** the `passwordHash` field lives in the share item in **DynamoDB**; the `POST /api/verify/:shareId` check is an **AWS Lambda** behind API Gateway that only generates a pre-signed S3 URL after the bcrypt comparison succeeds.
+
 ### 🔍 SafeDrop — Serverless File Safety Validation
 Before a file becomes shareable it is validated for: file extension, MIME/content type, maximum size (25 MB), suspicious filename/path patterns, empty/corrupted upload, and a **SHA-256 integrity hash**. States shown to the user:
 
@@ -90,7 +95,7 @@ Before a file becomes shareable it is validated for: file extension, MIME/conten
 | **S3 Event Notifications** | Event-driven trigger for SafeDrop after upload |
 | **AWS IAM** | Least-privilege roles for each Lambda |
 
-**DynamoDB item schema:** `shareId`, `originalFileName`, `objectKey`, `fileSize`, `contentType`, `uploadTime`, `expiryTime`, `downloadCount`, `maxDownloads`, `oneTime`, `status`, `safetyStatus`, `fileHash`.
+**DynamoDB item schema:** `shareId`, `originalFileName`, `objectKey`, `fileSize`, `contentType`, `uploadTime`, `expiryTime`, `downloadCount`, `maxDownloads`, `oneTime`, `status`, `safetyStatus`, `fileHash`, `passwordHash` (bcrypt, optional — AccessGuard).
 
 Deployment artifacts live in [`/app/aws/`](aws/): SAM `template.yaml`, Lambda handlers, and least-privilege IAM policies.
 
@@ -104,6 +109,7 @@ Deployment artifacts live in [`/app/aws/`](aws/): SAM `template.yaml`, Lambda ha
 | `GET`  | `/api/share/:shareId` | Share info + expiry/download validation |
 | `GET`  | `/api/status/:shareId` | Lightweight status + remaining time |
 | `GET`  | `/api/download/:shareId` | Authorize, then return a temporary secure download URL |
+| `POST` | `/api/verify/:shareId` | AccessGuard — verify share password before a download URL is minted |
 | `GET`  | `/api/file/:shareId?token=` | Stream bytes & atomically consume (burn point) |
 | `POST` | `/api/consume/:shareId` | Record a successful one-time download |
 | `POST` | `/api/scan/:fileId` | SafeDrop re-verification (recompute SHA-256) |
@@ -174,6 +180,7 @@ To switch the running app from Emergent storage to real S3, reimplement the func
 - **Hard-to-guess Share IDs** — `DBX-` + 32 bits of CSPRNG entropy (`secrets`).
 - **Authorization before URL generation** — expiry and burn state are checked before any download URL is minted.
 - **Atomic one-time downloads** — a conditional/`find_one_and_update` prevents a second successful download under race.
+- **AccessGuard password gate** — share passwords are bcrypt-hashed and verified server-side before any download URL is issued; they never appear in URLs or API responses.
 - **Unique object keys** — UUID-based keys; original filenames never appear in the key.
 - **Validated uploads** — size limit + extension/MIME/path checks via SafeDrop.
 - **Least-privilege IAM** — each Lambda gets only the S3 prefix + table actions it needs.

@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, UploadFile, File, Form, HTTPException, Query
+from fastapi import FastAPI, APIRouter, UploadFile, File, Form, HTTPException, Query, Body
 from fastapi.responses import JSONResponse, Response
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -8,6 +8,7 @@ import os
 import logging
 import hashlib
 import secrets
+import bcrypt
 from pathlib import Path
 from datetime import datetime, timezone, timedelta
 
@@ -34,6 +35,18 @@ DANGEROUS_EXT = {"exe", "bat", "sh", "cmd", "com", "msi", "jar", "scr", "vbs",
                  "dll", "ps1", "app", "deb", "apk", "bin", "cgi", "php", "js"}
 SUSPICIOUS_TOKENS = ["..", "/", "\\", "\x00", "<script", "%00"]
 LIFETIME_MAP = {"5m": 5, "15m": 15, "1h": 60, "24h": 1440}
+
+
+# AccessGuard — share passwords are always bcrypt-hashed, never stored in plaintext.
+def hash_password(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+
+def verify_password(plain: str, hashed: str) -> bool:
+    try:
+        return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    except Exception:
+        return False
 
 
 def scan_file(filename: str, data: bytes, content_type: str):
@@ -104,6 +117,7 @@ def public_share(doc: dict, owner: bool = False) -> dict:
         "downloadCount": doc["downloadCount"],
         "maxDownloads": doc["maxDownloads"],
         "oneTime": doc["oneTime"],
+        "passwordProtected": bool(doc.get("passwordHash")),
         "lifetime": doc.get("lifetime"),
         "safetyStatus": doc["safetyStatus"],
         "fileHash": doc["fileHash"],
@@ -144,6 +158,7 @@ async def upload(
     file: UploadFile = File(...),
     lifetime: str = Form(...),
     oneTime: bool = Form(False),
+    password: str = Form(None),
     sessionId: str = Form(...),
 ):
     data = await file.read()
@@ -180,6 +195,7 @@ async def upload(
         "downloadCount": 0,
         "maxDownloads": 1 if oneTime else 1_000_000,
         "oneTime": bool(oneTime),
+        "passwordHash": hash_password(password) if password else None,
         "lifetime": lifetime,
         "status": "ACTIVE",
         "safetyStatus": safety_status,
@@ -221,7 +237,7 @@ async def get_status(share_id: str):
 
 
 @api_router.get("/download/{share_id}")
-async def download(share_id: str):
+async def download(share_id: str, pw: str = Query(None)):
     """Authorization gate. Validates access, then mints a short-lived signed URL.
     Does NOT consume the share — consumption happens atomically when bytes stream."""
     doc = await db.shares.find_one({"shareId": share_id})
@@ -235,8 +251,42 @@ async def download(share_id: str):
     if st == "USED" or doc["downloadCount"] >= doc["maxDownloads"]:
         return JSONResponse(status_code=410, content={"error": "used", "message": "This one-time link has already been used."})
 
+    # AccessGuard — password must be verified before any download URL is minted.
+    if doc.get("passwordHash"):
+        if not pw:
+            return JSONResponse(status_code=401, content={"error": "password_required", "message": "This share is password protected."})
+        if not verify_password(pw, doc["passwordHash"]):
+            return JSONResponse(status_code=401, content={"error": "incorrect_password", "message": "Incorrect password."})
+
     token = aws_service.generate_download_token(share_id)
     return {"downloadUrl": f"/api/file/{share_id}?token={token}", "token": token}
+
+
+@api_router.post("/verify/{share_id}")
+async def verify_share_password(share_id: str, body: dict = Body(...)):
+    """AccessGuard — verify the share password, then mint a temporary secure download URL."""
+    doc = await db.shares.find_one({"shareId": share_id})
+    if not doc:
+        return JSONResponse(status_code=404, content={"error": "invalid", "message": "Invalid or unavailable share."})
+    if not doc.get("passwordHash"):
+        return {"verified": True, "passwordRequired": False}
+
+    password = (body.get("password") or "").strip()
+    if not password or not verify_password(password, doc["passwordHash"]):
+        return JSONResponse(status_code=401, content={"error": "incorrect_password", "message": "Incorrect password. Please try again."})
+
+    # Password is correct — still enforce SafeDrop, TimeVault and Burn gates.
+    if doc["safetyStatus"] != "verified":
+        return JSONResponse(status_code=403, content={"error": "unsafe", "message": "File failed safety validation."})
+    st = compute_status(doc)
+    if st == "EXPIRED":
+        return JSONResponse(status_code=410, content={"error": "expired", "message": "This file has expired and is no longer available."})
+    if st == "USED" or doc["downloadCount"] >= doc["maxDownloads"]:
+        return JSONResponse(status_code=410, content={"error": "used", "message": "This one-time link has already been used."})
+
+    token = aws_service.generate_download_token(share_id)
+    return {"verified": True, "passwordRequired": True,
+            "downloadUrl": f"/api/file/{share_id}?token={token}", "token": token}
 
 
 @api_router.post("/consume/{share_id}")

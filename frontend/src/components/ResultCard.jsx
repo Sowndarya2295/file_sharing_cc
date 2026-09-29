@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { Copy, Download, Plus, ShieldCheck, Clock3, Hash } from "lucide-react";
+import { Copy, Download, Plus, ShieldCheck, Clock3, Hash, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Countdown } from "@/components/Countdown";
@@ -51,6 +51,13 @@ export const ResultCard = ({ share, onReset }) => {
         <Row label="Security">
           <span className="inline-flex items-center gap-1 text-emerald-600">🟢 Verified</span>
         </Row>
+        {share.passwordProtected && (
+          <Row label="Protection">
+            <span className="inline-flex items-center gap-1.5 text-blue-600">
+              <Lock className="h-3.5 w-3.5" /> Password required
+            </span>
+          </Row>
+        )}
         <Row label="Share ID">
           <span data-testid="share-id-display" className="font-mono text-blue-600">{share.shareId}</span>
         </Row>

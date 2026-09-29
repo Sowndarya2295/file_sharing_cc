@@ -6,11 +6,12 @@ const BACKEND = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND}/api`;
 
 // createShare / uploadFile — POST /api/upload  (S3 put_object + DynamoDB put)
-export async function uploadFile({ file, lifetime, oneTime, sessionId, onProgress }) {
+export async function uploadFile({ file, lifetime, oneTime, password, sessionId, onProgress }) {
   const fd = new FormData();
   fd.append("file", file);
   fd.append("lifetime", lifetime);
   fd.append("oneTime", oneTime);
+  if (password) fd.append("password", password);
   fd.append("sessionId", sessionId);
   const res = await axios.post(`${API}/upload`, fd, {
     onUploadProgress: (e) => {
@@ -40,6 +41,12 @@ export async function getStatus(shareId) {
 // generateDownloadUrl — GET /api/download/:id  (auth check -> S3 pre-signed GET)
 export async function generateDownloadUrl(shareId) {
   const res = await axios.get(`${API}/download/${shareId}`);
+  return res.data;
+}
+
+// verifySharePassword (AccessGuard) — POST /api/verify/:id  (bcrypt check -> download URL)
+export async function verifySharePassword(shareId, password) {
+  const res = await axios.post(`${API}/verify/${shareId}`, { password });
   return res.data;
 }
 

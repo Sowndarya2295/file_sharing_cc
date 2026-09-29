@@ -1,5 +1,5 @@
 import { toast } from "sonner";
-import { Copy, Trash2, FileText, LayoutGrid, RefreshCw } from "lucide-react";
+import { Copy, Trash2, FileText, LayoutGrid, RefreshCw, Lock } from "lucide-react";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Countdown } from "@/components/Countdown";
 import { revokeShare, scanFile, buildShareLink } from "@/lib/api";
@@ -61,7 +61,10 @@ export const SharesDashboard = ({ shares, onChange }) => {
                     <FileText className="h-4 w-4" />
                   </span>
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-800">{s.originalFileName}</p>
+                    <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-800">
+                      <span className="truncate">{s.originalFileName}</span>
+                      {s.passwordProtected && <Lock className="h-3 w-3 flex-shrink-0 text-blue-500" />}
+                    </p>
                     <p className="font-mono text-[11px] text-slate-400">{s.shareId}</p>
                   </div>
                 </div>
