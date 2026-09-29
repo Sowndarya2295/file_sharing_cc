@@ -1,0 +1,189 @@
+{
+  "project_name": "DropBoxer",
+  "tagline": "Share it. Secure it. Let it disappear.",
+  "theme": "light",
+  "styling_philosophy": {
+    "vibe": "Swiss-inspired Tactical Minimalism for Cloud Security. High contrast, precise layout, crystal visual hierarchy, and polished presentation-ready finish.",
+    "anti_patterns_to_avoid": [
+      "No generic centered admin dashboard layout",
+      "No dark-mode gradient slop",
+      "No universal transition: all",
+      "No AI assistant emoji slop (e.g. 🤖🧠💭💡) — use Lucide React icons instead",
+      "No raw or dark overlays hiding the hero context"
+    ]
+  },
+  "typography": {
+    "font_family_heading": "Plus Jakarta Sans, sans-serif",
+    "font_family_body": "Inter, sans-serif",
+    "font_family_mono": "JetBrains Mono, monospace",
+    "weights": {
+      "heading": "font-extrabold tracking-tight",
+      "subheading": "font-semibold tracking-normal",
+      "body": "font-normal",
+      "mono": "font-medium"
+    },
+    "scale": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight",
+      "h3": "text-xl sm:text-2xl font-semibold",
+      "h4": "text-lg sm:text-xl font-medium",
+      "body": "text-base text-slate-600 leading-relaxed",
+      "small": "text-sm text-slate-500",
+      "caption": "text-xs font-mono uppercase tracking-widest text-slate-400"
+    }
+  },
+  "colors": {
+    "background": "#F8FAFC",
+    "surface_card": "#FFFFFF",
+    "surface_secondary": "#F1F5F9",
+    "text_primary": "#0F172A",
+    "text_secondary": "#475569",
+    "text_muted": "#64748B",
+    "border": "#E2E8F0",
+    "border_focus": "#3B82F6",
+    "primary": {
+      "main": "#2563EB",
+      "hover": "#1D4ED8",
+      "light": "#EFF6FF",
+      "border": "#BFDBFE"
+    },
+    "status": {
+      "active": {
+        "bg": "#ECFDF5",
+        "text": "#047857",
+        "border": "#A7F3D0",
+        "badge_icon": "🟢"
+      },
+      "expiring_soon": {
+        "bg": "#FFFBEB",
+        "text": "#B45309",
+        "border": "#FDE68A",
+        "badge_icon": "⏳"
+      },
+      "expired": {
+        "bg": "#FEF2F2",
+        "text": "#B91C1C",
+        "border": "#FECACA",
+        "badge_icon": "❌"
+      },
+      "used": {
+        "bg": "#F3F4F6",
+        "text": "#4B5563",
+        "border": "#E5E7EB",
+        "badge_icon": "🔥"
+      },
+      "scanning": {
+        "bg": "#EFF6FF",
+        "text": "#1D4ED8",
+        "border": "#BFDBFE",
+        "badge_icon": "🔍"
+      }
+    }
+  },
+  "layout_and_spacing": {
+    "container_max_width": "max-w-6xl mx-auto px-4 sm:px-6 lg:px-8",
+    "card_padding": "p-6 sm:p-8",
+    "border_radius": "rounded-2xl",
+    "gap_scale": {
+      "tight": "gap-3",
+      "normal": "gap-6",
+      "generous": "gap-10"
+    },
+    "grid_modes": {
+      "main_hero_split": "grid grid-cols-1 lg:grid-cols-12 gap-8 items-start",
+      "dashboard_grid": "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+    }
+  },
+  "components_and_sections": {
+    "header": {
+      "style": "sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200/80 px-6 py-4 flex items-center justify-between",
+      "logo": "DropBoxer brand identity with AWS cloud serverless badge",
+      "nav_links": ["Upload & Share", "Share Lookup", "My Shares Dashboard", "AWS Architecture Specs"]
+    },
+    "three_core_features": [
+      {
+        "id": "timevault",
+        "title": "TimeVault — Smart Expiration",
+        "options": ["5m", "15m", "1h", "24h"],
+        "statuses": ["ACTIVE", "EXPIRING SOON", "EXPIRED"]
+      },
+      {
+        "id": "burn_after_download",
+        "title": "Burn After Download",
+        "behavior": "One-time download link that auto-destroys immediately after first retrieve."
+      },
+      {
+        "id": "safedrop",
+        "title": "SafeDrop Validation",
+        "checks": ["Extension check", "MIME type", "Max size (50MB)", "Suspicious pattern scan", "Empty/Corrupted check", "SHA-256 hash generation"]
+      }
+    ],
+    "main_upload_card": {
+      "features": [
+        "Interactive Drag-and-drop zone with animated upload pulse",
+        "File lifetime radio selector (5m, 15m, 1h, 24h)",
+        "Burn-after-download checkbox toggle",
+        "Live SafeDrop scanning status indicator with full checksum",
+        "Upload & Create Share button with primary blue treatment"
+      ]
+    },
+    "result_card": {
+      "features": [
+        "Unique Share ID display (DBX-XXXXXX) with copy button",
+        "Live countdown timer to exact expiry moment",
+        "Download limit counter (e.g., 0/1 or Unlimited)",
+        "Direct action buttons: Copy Share Link, Download, Create Another Share"
+      ]
+    },
+    "share_page": {
+      "features": [
+        "Dedicated recipient view route (/share/:id)",
+        "File metadata preview (Name, Size, Type, Security Status, Hash)",
+        "Live security verification tag",
+        "Download Securely button with auto-burn trigger feedback",
+        "Distinct Expired, Burned (Used), and Invalid ID warning states"
+      ]
+    },
+    "my_shares_dashboard": {
+      "features": [
+        "Session-based cards/columns tracking created files",
+        "Live countdown timers per card",
+        "Status badges with distinct colors (ACTIVE, EXPIRING SOON, EXPIRED, BURNED)",
+        "Quick action buttons: Copy Link, Revoke/Delete, Re-verify Hash"
+      ]
+    }
+  },
+  "motion_and_interactions": {
+    "transitions": "transition-colors duration-200 ease-in-out, transition-shadow duration-200 ease-in-out",
+    "hover_effects": "hover:shadow-md hover:border-blue-300 hover:-translate-y-0.5 transition-all duration-200",
+    "active_button": "active:scale-[0.98] transition-transform",
+    "upload_zone_drag": "border-2 border-dashed border-blue-400 bg-blue-50/50 scale-[1.01]"
+  },
+  "image_urls": {
+    "serverless_cloud_banner": "https://images.unsplash.com/photo-1667984390538-3dea7a3fe33d?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "security_lock_thumbnail": "https://images.unsplash.com/photo-1614064641938-3bbee52942c7?crop=entropy&cs=srgb&fm=jpg&q=85",
+    "datacenter_background": "https://images.unsplash.com/photo-1639066648921-82d4500abf1a?crop=entropy&cs=srgb&fm=jpg&q=85"
+  },
+  "required_test_ids": {
+    "nav": "dropboxer-header-nav",
+    "upload_zone": "file-upload-drag-drop-zone",
+    "file_input": "file-input-element",
+    "lifetime_radio_group": "file-lifetime-radio-group",
+    "burn_toggle": "burn-after-download-checkbox",
+    "upload_btn": "upload-and-create-share-button",
+    "safedrop_status": "safedrop-scan-status-badge",
+    "result_card": "share-result-card",
+    "share_id": "share-id-display",
+    "copy_link_btn": "copy-share-link-button",
+    "download_btn": "download-file-button",
+    "dashboard_grid": "my-shares-dashboard-grid",
+    "share_page_card": "share-access-card"
+  },
+  "UNIVERSAL GUIDELINES FOR MAIN AGENT": [
+    "Ensure all interactive and informational elements have data-testid attributes.",
+    "Do NOT use transparent dropdown or header backgrounds.",
+    "Use sonner for notifications and toasts.",
+    "Ensure the application works seamlessly on mobile and desktop viewports.",
+    "Implement real client-side file hash simulation (SHA-256) and SafeDrop validation routines."
+  ]
+}

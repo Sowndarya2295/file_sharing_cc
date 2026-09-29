@@ -1,0 +1,86 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  DropBoxer — Secure Temporary File Sharing (S3 + Lambda + API Gateway + DynamoDB).
+  Private bucket, pre-signed URLs, event-driven SafeDrop validation.
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 30
+    MemorySize: 256
+    Environment:
+      Variables:
+        BUCKET: !Ref FilesBucket
+        METADATA_TABLE: !Ref SharesTable
+        PRESIGN_TTL: '120'
+        MAX_UPLOAD_BYTES: '26214400'
+
+Resources:
+  FilesBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub dropboxer-files-${AWS::AccountId}
+      PublicAccessBlockConfiguration:      # bucket stays PRIVATE
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:              # auto-purge expired objects
+        Rules:
+          - Id: PurgeAfter1Day
+            Status: Enabled
+            ExpirationInDays: 1
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Function: !GetAtt SafeDropFunction.Arn
+
+  SharesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: DropBoxerShares
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: objectKey
+          AttributeType: S
+        - AttributeName: shareId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: objectKey
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: shareId-index
+          KeySchema:
+            - AttributeName: shareId
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: api_handlers.get_share
+      CodeUri: lambda/
+      Policies:
+        - S3CrudPolicy: { BucketName: !Sub dropboxer-files-${AWS::AccountId} }
+        - DynamoDBCrudPolicy: { TableName: !Ref SharesTable }
+      Events:
+        Upload:   { Type: Api, Properties: { Path: /api/upload, Method: post } }
+        Share:    { Type: Api, Properties: { Path: /api/share/{shareId}, Method: get } }
+        Download: { Type: Api, Properties: { Path: /api/download/{shareId}, Method: get } }
+        Consume:  { Type: Api, Properties: { Path: /api/consume/{shareId}, Method: post } }
+
+  SafeDropFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: safedrop_validator.handler
+      CodeUri: lambda/
+      Policies:
+        - S3ReadPolicy: { BucketName: !Sub dropboxer-files-${AWS::AccountId} }
+        - DynamoDBCrudPolicy: { TableName: !Ref SharesTable }
+
+Outputs:
+  ApiUrl:
+    Description: Base URL for the DropBoxer REST API
+    Value: !Sub https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod

@@ -1,0 +1,31 @@
+{
+  "Comment": "Enforce a PRIVATE bucket. Block all public access at the account/bucket level and deny any non-TLS request. Objects are reachable ONLY via Lambda-generated pre-signed URLs.",
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "DenyInsecureTransport",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:*",
+      "Resource": [
+        "arn:aws:s3:::dropboxer-files-<ACCOUNT_ID>",
+        "arn:aws:s3:::dropboxer-files-<ACCOUNT_ID>/*"
+      ],
+      "Condition": { "Bool": { "aws:SecureTransport": "false" } }
+    },
+    {
+      "Sid": "DenyPublicRead",
+      "Effect": "Deny",
+      "Principal": "*",
+      "Action": "s3:GetObject",
+      "Resource": "arn:aws:s3:::dropboxer-files-<ACCOUNT_ID>/*",
+      "Condition": { "StringNotEquals": { "aws:PrincipalAccount": "<ACCOUNT_ID>" } }
+    }
+  ],
+  "RecommendedPublicAccessBlock": {
+    "BlockPublicAcls": true,
+    "IgnorePublicAcls": true,
+    "BlockPublicPolicy": true,
+    "RestrictPublicBuckets": true
+  }
+}
