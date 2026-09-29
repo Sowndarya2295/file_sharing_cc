@@ -277,6 +277,9 @@ async def file_stream(share_id: str, token: str = Query(...)):
     if compute_status(doc) == "EXPIRED":
         return JSONResponse(status_code=410, content={"error": "expired", "message": "This file has expired."})
 
+    # Fetch bytes BEFORE burning so a storage failure can't consume a one-time link.
+    data, ct = aws_service.get_object(doc["objectKey"])
+
     updated = await db.shares.find_one_and_update(
         {"shareId": share_id, "status": {"$ne": "USED"},
          "$expr": {"$lt": ["$downloadCount", "$maxDownloads"]}},
@@ -290,7 +293,6 @@ async def file_stream(share_id: str, token: str = Query(...)):
         await db.shares.update_one({"shareId": share_id},
                                    {"$set": {"status": "USED", "usedAt": datetime.now(timezone.utc).isoformat()}})
 
-    data, ct = aws_service.get_object(updated["objectKey"])
     return Response(
         content=data,
         media_type=updated["contentType"] or ct,
