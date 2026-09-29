@@ -195,7 +195,7 @@ async def upload(
         "downloadCount": 0,
         "maxDownloads": 1 if oneTime else 1_000_000,
         "oneTime": bool(oneTime),
-        "passwordHash": hash_password(password) if password else None,
+        "passwordHash": hash_password(password.strip()) if password and password.strip() else None,
         "lifetime": lifetime,
         "status": "ACTIVE",
         "safetyStatus": safety_status,

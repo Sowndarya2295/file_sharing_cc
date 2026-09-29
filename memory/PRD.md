@@ -26,10 +26,11 @@ Build DropBoxer — "Secure Temporary File Sharing Using AWS Serverless Architec
 
 ## Implemented (2026-09-29)
 - Full upload → SafeDrop scan → private storage → share creation flow.
-- Endpoints: POST /api/upload, GET /api/share/:id, GET /api/status/:id, GET /api/download/:id, GET /api/file/:id (atomic burn point, bytes fetched before consume), POST /api/consume/:id, POST /api/scan/:id, GET /api/shares, DELETE /api/share/:id.
+- Endpoints: POST /api/upload, GET /api/share/:id, GET /api/status/:id, GET /api/download/:id (optional ?pw= gate), GET /api/file/:id (atomic burn point, bytes fetched before consume), POST /api/consume/:id, POST /api/scan/:id, POST /api/verify/:id (AccessGuard), GET /api/shares, DELETE /api/share/:id.
 - Live countdown, status badges, Result card, My Shares dashboard (copy/re-verify/revoke), Share page with expired/used/invalid states.
-- Complete README (10 sections + ASCII diagram) and AWS SAM/Lambda/IAM artifacts.
-- Verified: 13/13 backend tests + full frontend E2E passed (iteration_1).
+- **AccessGuard (password-protected shares)**: optional per-share password, bcrypt-hashed server-side (never plaintext, never in URLs or API responses — only `passwordProtected` boolean is exposed); password-entry screen on the share page; verification happens before any download URL is minted; combines with TimeVault/Burn/SafeDrop. Upload UI: protect-with-password-checkbox + share-password-input; share UI: share-password-entry-input + unlock-download-button + password-error-message.
+- Complete README (10 sections + ASCII diagram, AccessGuard AWS mapping) and AWS SAM/Lambda/IAM artifacts.
+- Verified: 25/25 backend tests + full frontend E2E passed (iteration_2), including all AccessGuard combos.
 
 ## Backlog / Future (P1/P2)
 - P1: password-protected shares; configurable multi-download limits.
